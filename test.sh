@@ -1,4 +1,4 @@
-file=listing_0039_more_movs
+file=listing_0041_add_sub_cmp_jnz
 
 go run main.go $file
 
