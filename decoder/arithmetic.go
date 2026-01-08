@@ -5,6 +5,19 @@ import (
 	"strings"
 )
 
+func bitsToArithmeticOperation(bits byte) string {
+	switch bits {
+	case 0b000:
+		return "add"
+	case 0b101:
+		return "sub"
+	case 0b111:
+		return "cmp"
+	}
+
+	return ""
+}
+
 // Register/memory to/from register
 // [0 0 0 0 0 0 d w]
 // [mod(2 bits) reg(3 bits) rm(3 bits)]
@@ -31,7 +44,11 @@ func decodeAddRegMemoryWithRegisterToEither(instruction []byte) string {
 	// 3. Decode the destination registry.
 	rmField := instruction[1] & 0b0000_0111
 
-	builder.WriteString("add ")
+	// Compute if this is an add, mov or cmp.
+	operationBits := instruction[0] >> 3 & 0b111
+	builder.WriteString(
+		fmt.Sprintf("%v ", bitsToArithmeticOperation(operationBits)),
+	)
 
 	switch modField {
 	case 0b00:
@@ -139,44 +156,63 @@ func decodeAddImmediateToRegisterMemory(instruction []byte) string {
 	// 3. Decode the destination registry.
 	rmField := instruction[1] & 0b0000_0111
 
-	builder.WriteString("add ")
+	// Compute if this is an add, mov or cmp.
+	operationBits := instruction[1] >> 3 & 0b111
+	builder.WriteString(
+		fmt.Sprintf("%v ", bitsToArithmeticOperation(operationBits)),
+	)
 
 	switch modField {
 	case 0b00:
 		// Memory only, no displacement follows
 		// except when rmField = 110
 		if rmField == 0b110 {
-			builder.WriteString("direct address 2")
-		} else {
+			displacement := int16(instruction[2]) | int16(instruction[3])<<8
+			builder.WriteString(
+				fmt.Sprintf("word [%v]", displacement),
+			)
+
 			if dataIsByte {
-				builder.WriteString("byte ")
+				data := instruction[4]
+				builder.WriteString(
+					fmt.Sprintf(", %v", data),
+				)
 			} else {
+				data := uint16(instruction[4]) | uint16(instruction[5])<<8
+				builder.WriteString(
+					fmt.Sprintf(", %v", data),
+				)
+			}
+		} else {
+			if (s && w) || (!s && w)  {
 				builder.WriteString("word ")
+			} else {
+				builder.WriteString("byte ")
 			}
 			builder.WriteString(
 				fmt.Sprintf("[%v]", effectiveAddressCalculation(rmField)),
 			)
-		}
 
-		if dataIsByte {
-			data := instruction[2]
-			builder.WriteString(
-				fmt.Sprintf(", %v", data),
-			)
-		} else {
-			data := uint16(instruction[2]) | uint16(instruction[3])<<8
-			builder.WriteString(
-				fmt.Sprintf(", %v", data),
-			)
+			if dataIsByte {
+				data := instruction[2]
+				builder.WriteString(
+					fmt.Sprintf(", %v", data),
+				)
+			} else {
+				data := uint16(instruction[2]) | uint16(instruction[3])<<8
+				builder.WriteString(
+					fmt.Sprintf(", %v", data),
+				)
+			}
 		}
 	case 0b01:
 		// Memory mode, 8-bit displacement follows.
 		displacement := int8(instruction[2])
 
-		if dataIsByte {
-			builder.WriteString("byte ")
-		} else {
+		if (s && w) || (!s && w)  {
 			builder.WriteString("word ")
+		} else {
+			builder.WriteString("byte ")
 		}
 
 		builder.WriteString(
@@ -197,10 +233,10 @@ func decodeAddImmediateToRegisterMemory(instruction []byte) string {
 	case 0b10:
 		// Memory mode, 16-bit displacement follows
 		displacement := uint16(instruction[2]) | uint16(instruction[3])<<8
-		if dataIsByte {
-			builder.WriteString("byte ")
-		} else {
+		if (s && w) || (!s && w)  {
 			builder.WriteString("word ")
+		} else {
+			builder.WriteString("byte ")
 		}
 
 		builder.WriteString(
@@ -253,7 +289,13 @@ func decodeAddImmediateToAccumulator(instruction []byte) string {
 	// when 1, instructions operate on word data
 	isWord := instruction[0]&0b1 == 1
 
-	builder.WriteString("add ")
+	// Computes if this is an add, mov, or cmp
+	operationBits := (instruction[0] >> 3) & 0b111
+	arithmeticOperation := bitsToArithmeticOperation(operationBits)
+	builder.WriteString(
+		fmt.Sprintf("%v ", arithmeticOperation),
+	)
+
 	if isWord {
 		data := int16(instruction[1]) | int16(instruction[2])<<8
 		builder.WriteString(

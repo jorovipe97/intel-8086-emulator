@@ -115,7 +115,9 @@ func (d *Decoder) analyzeOpCode(instruction []byte) (Opcode, int, error) {
 		}
 
 		return MovImmediateToRegister, bytesToRead, nil
-	} else if firstByte>>2 == byte(AddRegMemoryWithRegisterToEither) {
+	} else if firstByte>>2 == byte(AddRegMemoryWithRegisterToEither) ||
+		firstByte>>2 == byte(SubRegMemoryWithRegisterToEither) ||
+		firstByte>>2 == byte(CmpRegMemoryWithRegisterToEither) {
 		// Register mode/Memory mode with displacement length
 		modField := instruction[1] >> 6
 		var bytesToRead int = 0
@@ -141,8 +143,18 @@ func (d *Decoder) analyzeOpCode(instruction []byte) (Opcode, int, error) {
 			bytesToRead = 2
 		}
 
-		return AddRegMemoryWithRegisterToEither, bytesToRead, nil
-	} else if firstByte>>2 == byte(AddImmediateToRegisterMemory) {
+		var opcode Opcode
+		switch firstByte >> 2 {
+		case byte(AddRegMemoryWithRegisterToEither):
+			opcode = AddRegMemoryWithRegisterToEither
+		case byte(SubRegMemoryWithRegisterToEither):
+			opcode = SubRegMemoryWithRegisterToEither
+		case byte(CmpRegMemoryWithRegisterToEither):
+			opcode = CmpRegMemoryWithRegisterToEither
+		}
+
+		return opcode, bytesToRead, nil
+	} else if firstByte>>2 == byte(ArithmeticImmediateToRegisterMemory) {
 		// Two bytes for op encoding
 		var bytesToRead int = 2
 
@@ -159,13 +171,20 @@ func (d *Decoder) analyzeOpCode(instruction []byte) (Opcode, int, error) {
 		} else if wField {
 			bytesToRead += 2
 		} else {
-			// If bot are false, then data is a byte.
+			// If both are false, then data is a byte.
 			bytesToRead += 1
 		}
 
 		// Register mode/Memory mode with displacement length
 		modField := instruction[1] >> 6
 		switch modField {
+		case 0b00:
+		// Memory mode, no displacement follows.
+		// Except when R/M field = 110, then, 16-bit displacement follwos.
+		rmField := instruction[1] & 0b0000_0111
+			if rmField == 0b110 {
+				bytesToRead += 2
+			}
 		case 0b01:
 			// Memory mode, 8 bit displacement follows
 			bytesToRead += 1 // An additional byte
@@ -173,8 +192,11 @@ func (d *Decoder) analyzeOpCode(instruction []byte) (Opcode, int, error) {
 			// Memory mode, 16 bit displacement follows
 			bytesToRead += 2 // Two additional bytes.
 		}
-		return AddImmediateToRegisterMemory, bytesToRead, nil
-	} else if firstByte>>1 == byte(AddImmediateToAccumulator) {
+		fmt.Printf("Bytes to read: %v\n", bytesToRead)
+		return ArithmeticImmediateToRegisterMemory, bytesToRead, nil
+	} else if firstByte>>1 == byte(AddImmediateToAccumulator) ||
+		firstByte>>1 == byte(SubImmediateToAccumulator) ||
+		firstByte>>1 == byte(CmpImmediateToAccumulator) {
 		// Two bytes for op encoding, and first data.
 		var bytesToRead int = 2
 		// Instruction operates on word data.
@@ -185,7 +207,17 @@ func (d *Decoder) analyzeOpCode(instruction []byte) (Opcode, int, error) {
 			bytesToRead += 1
 		}
 
-		return AddImmediateToAccumulator, bytesToRead, nil
+		var opcode Opcode
+		switch firstByte >> 1 {
+		case byte(AddImmediateToAccumulator):
+			opcode = AddImmediateToAccumulator
+		case byte(SubImmediateToAccumulator):
+			opcode = SubImmediateToAccumulator
+		case byte(CmpImmediateToAccumulator):
+			opcode = CmpImmediateToAccumulator
+		}
+
+		return opcode, bytesToRead, nil
 	}
 
 	return 0, 0, errors.New("cannot identify instruction")
@@ -228,11 +260,15 @@ func (d *Decoder) AsmString(opcode Opcode, instruction []byte) string {
 		return decodeMovAccumulatorToMemory(instruction)
 	case MovImmediateToRegister:
 		return decodeMovImmediateToRegister(instruction)
-	case AddRegMemoryWithRegisterToEither:
+	case AddRegMemoryWithRegisterToEither,
+		SubRegMemoryWithRegisterToEither,
+		CmpRegMemoryWithRegisterToEither:
 		return decodeAddRegMemoryWithRegisterToEither(instruction)
-	case AddImmediateToRegisterMemory:
+	case ArithmeticImmediateToRegisterMemory:
 		return decodeAddImmediateToRegisterMemory(instruction)
-	case AddImmediateToAccumulator:
+	case AddImmediateToAccumulator,
+		SubImmediateToAccumulator,
+		CmpImmediateToAccumulator:
 		return decodeAddImmediateToAccumulator(instruction)
 	}
 

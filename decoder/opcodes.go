@@ -21,10 +21,14 @@ const (
 
 	// Add - Reg/Memory with register to either
 	AddRegMemoryWithRegisterToEither Opcode = 0b0000_0000
+	SubRegMemoryWithRegisterToEither Opcode = 0b0000_1010
+	CmpRegMemoryWithRegisterToEither Opcode = 0b0000_1110
 
 	// Add - Immediate to register/memory
-	AddImmediateToRegisterMemory Opcode = 0b0010_0000
+	ArithmeticImmediateToRegisterMemory Opcode = 0b0010_0000
 
 	// Add - Immediate to accumulator
-	AddImmediateToAccumulator Opcode = 0b00000010
+	AddImmediateToAccumulator Opcode = 0b0000_0010
+	SubImmediateToAccumulator Opcode = 0b0001_0110
+	CmpImmediateToAccumulator Opcode = 0b0001_1110
 )
