@@ -1,4 +1,4 @@
-file=listing_0041_add_sub_cmp_jnz
+file=test-asm
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm

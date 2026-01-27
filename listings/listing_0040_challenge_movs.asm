@@ -22,6 +22,7 @@ mov [si - 300], cx
 mov dx, [bx - 32]
 
 ; Explicit sizes
+; // TODO: Why is this case wrong.
 mov [bp + di], byte 7
 mov [di + 901], word 347
 

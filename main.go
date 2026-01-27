@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	deco "github.com/jorovipe97/performance-aware-homework/decoder"
 )
@@ -28,11 +27,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("%08b\n", data)
 
-	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("; %v\n", fileName))
-	// Tells assembler we intent to run assembly for old 8086 architecture.
-	builder.WriteString("bits 16\n")
+	asmPrinter := deco.NewAsmPrinter()
+	asmPrinter.AddComment(fileName)
+	asmPrinter.Bits16Header()
 
 	decoder := deco.Decoder{
 		Data: data,
@@ -42,22 +41,28 @@ func main() {
 			break
 		}
 
-		opcode, instr, err := decoder.Next()
+		instr, err := decoder.NextInstruction()
 		if err != nil {
-			log.Print(err)
+			fmt.Println(err)
+			asmPrinter.AddComment(fmt.Sprintf("ERROR: %v", err))
 			break
 		}
-		instrAsmString := decoder.AsmString(opcode, instr)
-		builder.WriteString(instrAsmString + "\n")
+
+		if instr.Op != deco.OpNone {
+			asmPrinter.AddInstruction(instr)
+		} else {
+			asmPrinter.AddComment("ERROR: Unrecognized binary in instruction stream.")
+			break
+		}
 	}
 
 	// Shows assembly code:
-	asm := builder.String()
-	fmt.Println(asm)
+	asmString := asmPrinter.String()
+	fmt.Println(asmString)
 
 	// Saves the final assembly into disk.
 	newAsmFile := filepath.Join(wd, "result.asm")
-	err = os.WriteFile(newAsmFile, []byte(asm), 0644)
+	err = os.WriteFile(newAsmFile, []byte(asmString), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
