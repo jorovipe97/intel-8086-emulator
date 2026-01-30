@@ -32,14 +32,33 @@ func (p *AsmPrinter) AddInstruction(instruction Instruction) {
 		separator = ", "
 	}
 
-	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.destination, instruction.Flags))
+	// When the destination is a register, the assembler infers the size from the register name:
+	// MOV AX, [BX]      ; AX is 16-bit → word operation (no specifier needed)
+	// MOV AL, [BX]      ; AL is 8-bit → byte operation (no specifier needed)
+	// But when the destination is memory, there's no way to know the size:
+	// MOV [BX], 5       ; Is this 8-bit or 16-bit? Assembler can't tell!
+	// So you MUST specify:
+	// MOV byte [BX], 5   ; Store 5 as 8-bit
+	// MOV word [BX], 5   ; Store 5 as 16-bit
+	if _, isRegisterOperand := instruction.Operands.destination.(RegisterOperand); !isRegisterOperand {
+		fmt.Println("Not Register Operand...")
+		fmt.Printf("%08b - %08b", instruction.Flags, InstructionFlagWide)
+		if instruction.Flags&InstructionFlagWide == InstructionFlagWide {
+			fmt.Fprint(p.stringsBuilder, "word ")
+		} else {
+			fmt.Fprint(p.stringsBuilder, "byte ")
+		}
+	}
+
+	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.destination))
 	fmt.Fprint(p.stringsBuilder, separator)
-	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.source, instruction.Flags))
+	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.source))
 	fmt.Fprint(p.stringsBuilder, "\n")
 }
 
-func printOperand(operand Operand, instructionFlags InstructionFlag) string {
+func printOperand(operand Operand) string {
 	fmt.Println("Printing Operand...")
+
 	if operand == nil {
 		fmt.Println("Operand is nil")
 		return ""
@@ -53,13 +72,7 @@ func printOperand(operand Operand, instructionFlags InstructionFlag) string {
 		fmt.Println("Memory Operand")
 		return getEffectiveAddressExpression(specificOperand)
 	case ImmediateOperand:
-		fmt.Println("Immediate Operand")
-		fmt.Printf("%08b - %08b", instructionFlags, InstructionFlagWide)
-		var byteWordSpecifier string = "byte"
-		if instructionFlags&InstructionFlagWide == InstructionFlagWide {
-			byteWordSpecifier = "word"
-		}
-		return fmt.Sprintf("%v %v", byteWordSpecifier, specificOperand.Value)
+		return fmt.Sprintf("%v", specificOperand.Value)
 	}
 
 	fmt.Println("Unknown operand type")

@@ -33,6 +33,8 @@ func (v InstructionBitsUsage) String() string {
 		return "BitsEnd"
 	case BitsLiteral:
 		return "BitsLiteral"
+	case BitsS:
+		return "BitsS"
 	case BitsD:
 		return "BitsD"
 	case BitsW:
