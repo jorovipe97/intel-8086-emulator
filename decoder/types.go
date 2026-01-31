@@ -7,6 +7,7 @@ const (
 	OpMov
 	OpAdd
 	OpSub
+	OpCmp
 )
 
 type InstructionBitsUsage uint8

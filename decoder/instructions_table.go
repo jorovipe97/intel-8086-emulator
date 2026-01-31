@@ -192,12 +192,53 @@ var instructionsTable = [...]InstructionEncoding{
 			dataIfW,
 		},
 	},
-	// Arithmetic - Immediate to accumulator
+	// Arithmetic - Sub Immediate to accumulator
 	{
 		op:       OpSub,
 		mnemonic: "sub",
 		bits: [16]InstructionBits{
 			{Usage: BitsLiteral, BitCount: 7, Value: 0b00_101_10},
+			w,
+			// 000 -> AX when w is 1. Or AL when w is 0.
+			impliedReg(0b000),
+			data,
+			dataIfW,
+		},
+	},
+	// Arithmetic - Cmp Reg/memory with register to either
+	{
+		op:       OpCmp,
+		mnemonic: "cmp",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 6, Value: 0b00_111_0},
+			d,
+			w,
+			mod,
+			reg,
+			rm,
+		},
+	},
+	// Arithmetic - Cmp Immediate from register/memory
+	{
+		op:       OpCmp,
+		mnemonic: "cmp",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 6, Value: 0b100_000},
+			s,
+			w,
+			mod,
+			{Usage: BitsLiteral, BitCount: 3, Value: 0b111},
+			rm,
+			data,
+			dataIfW,
+		},
+	},
+	// Arithmetic - Sub Immediate to accumulator
+	{
+		op:       OpCmp,
+		mnemonic: "cmp",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 7, Value: 0b00_111_10},
 			w,
 			// 000 -> AX when w is 1. Or AL when w is 0.
 			impliedReg(0b000),
