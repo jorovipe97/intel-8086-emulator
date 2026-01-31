@@ -1,5 +1,6 @@
 bits 16
 
+sub si, 2
 ;add bx, [bx+si]
 ; add bx, [bp]
 ;add si, 2

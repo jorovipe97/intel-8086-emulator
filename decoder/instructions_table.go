@@ -153,11 +153,51 @@ var instructionsTable = [...]InstructionEncoding{
 	},
 	// Arithmetic - Immediate to accumulator
 	{
-		// TODO: This case is not working occrectly
 		op:       OpAdd,
 		mnemonic: "add",
 		bits: [16]InstructionBits{
 			{Usage: BitsLiteral, BitCount: 7, Value: 0b000_001_0},
+			w,
+			// 000 -> AX when w is 1. Or AL when w is 0.
+			impliedReg(0b000),
+			data,
+			dataIfW,
+		},
+	},
+	// Arithmetic - Sub Reg/memory with register to either
+	{
+		op:       OpSub,
+		mnemonic: "sub",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 6, Value: 0b001_010},
+			d,
+			w,
+			mod,
+			reg,
+			rm,
+		},
+	},
+	// Arithmetic - Sub Immediate from register/memory
+	{
+		op:       OpSub,
+		mnemonic: "sub",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 6, Value: 0b100_000},
+			s,
+			w,
+			mod,
+			{Usage: BitsLiteral, BitCount: 3, Value: 0b101},
+			rm,
+			data,
+			dataIfW,
+		},
+	},
+	// Arithmetic - Immediate to accumulator
+	{
+		op:       OpSub,
+		mnemonic: "sub",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 7, Value: 0b00_101_10},
 			w,
 			// 000 -> AX when w is 1. Or AL when w is 0.
 			impliedReg(0b000),
