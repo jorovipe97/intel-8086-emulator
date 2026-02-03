@@ -135,6 +135,29 @@ const (
 	RegisterCount
 )
 
+func (r RegisterName) String() string {
+	switch r {
+	case 1:
+		return "ax"
+	case 2:
+		return "cx"
+	case 3:
+		return "dx"
+	case 4:
+		return "bx"
+	case 5:
+		return "sp"
+	case 6:
+		return "bp"
+	case 7:
+		return "si"
+	case 8:
+		return "di"
+	}
+
+	return ""
+}
+
 type RegisterInfo struct {
 	// Which register (A, B, C, D, SP, BP, SI, DI)
 	RegisterName RegisterName

@@ -1,10 +1,10 @@
-file=listing_0041_add_sub_cmp_jnz
+file=listing_0044_register_movs
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm
 echo "Succesfull!"
 
-go run main.go $file
+go run main.go $file --simulate
 
 echo "Assemblying resulting file..."
 ./nasm result.asm

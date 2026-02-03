@@ -4,16 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 )
 
 // Details of the mov operation are after page 256 of 8086 user's manual
 
 // Reads an array of binary instructions and iterates over each instruction.
 type Decoder struct {
-	Data                []byte
-	DisAsmStringBuilder strings.Builder
-	pos                 int
+	Data []byte
+	pos  int
+}
+
+func NewDecoder(data []byte) *Decoder {
+	return &Decoder{
+		Data: data,
+	}
 }
 
 func (deco *Decoder) HasNext() bool {

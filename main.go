@@ -15,6 +15,10 @@ func main() {
 	}
 
 	fileName := os.Args[1]
+	var shouldSimulate bool
+	if len(os.Args) == 3 {
+		shouldSimulate = os.Args[2] == "--simulate"
+	}
 
 	// Get the working directory
 	wd, err := os.Getwd()
@@ -30,12 +34,11 @@ func main() {
 	fmt.Printf("%08b\n", data)
 
 	asmPrinter := deco.NewAsmPrinter()
+	decoder := deco.NewDecoder(data)
+	simulator := deco.NewSimulator(asmPrinter)
+
 	asmPrinter.AddComment(fileName)
 	asmPrinter.Bits16Header()
-
-	decoder := deco.Decoder{
-		Data: data,
-	}
 	for {
 		if !decoder.HasNext() {
 			break
@@ -50,6 +53,12 @@ func main() {
 
 		if instr.Op != deco.OpNone {
 			asmPrinter.AddInstruction(instr)
+			if shouldSimulate {
+				err := simulator.ExecInstruction(instr)
+				if err != nil {
+					asmPrinter.AddComment("ERROR: Error simulating instruction.")
+				}
+			}
 		} else {
 			asmPrinter.AddComment("ERROR: Unrecognized binary in instruction stream.")
 			break
@@ -59,6 +68,7 @@ func main() {
 	// Shows assembly code:
 	asmString := asmPrinter.String()
 	fmt.Println(asmString)
+	fmt.Println(simulator.String())
 
 	// Saves the final assembly into disk.
 	newAsmFile := filepath.Join(wd, "result.asm")
