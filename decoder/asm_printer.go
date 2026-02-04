@@ -73,6 +73,8 @@ func printOperand(operand Operand) string {
 		return getEffectiveAddressExpression(specificOperand)
 	case ImmediateOperand:
 		return fmt.Sprintf("%v", specificOperand.Value)
+	case SegmentRegisterOperand:
+		return specificOperand.SegmentRegister.String()
 	}
 
 	fmt.Println("Unknown operand type")

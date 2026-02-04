@@ -6,6 +6,7 @@ var rm = InstructionBits{Usage: BitsRm, BitCount: 3}
 var w = InstructionBits{Usage: BitsW, BitCount: 1}
 var s = InstructionBits{Usage: BitsS, BitCount: 1}
 var d = InstructionBits{Usage: BitsD, BitCount: 1}
+var sr = InstructionBits{Usage: BitsSR, BitCount: 2}
 var data = InstructionBits{Usage: BitsData}
 var dataIfW = InstructionBits{Usage: BitsWMakesDataWide, Value: 1}
 
@@ -40,6 +41,15 @@ func impliedRm(value uint8) InstructionBits {
 func impliedD(value uint8) InstructionBits {
 	return InstructionBits{
 		Usage:    BitsD,
+		BitCount: 0,
+		Shift:    0,
+		Value:    value,
+	}
+}
+
+func impliedW(value uint8) InstructionBits {
+	return InstructionBits{
+		Usage:    BitsW,
 		BitCount: 0,
 		Shift:    0,
 		Value:    value,
@@ -121,6 +131,38 @@ var instructionsTable = [...]InstructionEncoding{
 			impliedRm(0b110),
 			// Instruction source is always in the reg field.
 			impliedD(0b0),
+		},
+	},
+	// Register/Memory to segment register
+	{
+		op:       OpMov,
+		mnemonic: "mov",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b1000_1110},
+			mod,
+			{Usage: BitsLiteral, BitCount: 1, Value: 0b0},
+			sr,
+			rm,
+			// Segment register field acts as destination
+			impliedD(0b1),
+			// We assumme always wide, as segment register only support 16 bits data.
+			impliedW(0b1),
+		},
+	},
+	// Segment register to Register/Memory
+	{
+		op:       OpMov,
+		mnemonic: "mov",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b1000_1100},
+			mod,
+			{Usage: BitsLiteral, BitCount: 1, Value: 0b0},
+			sr,
+			rm,
+			// Segment register field acts as source
+			impliedD(0b0),
+			// We assumme always wide, as segment register only support 16 bits data.
+			impliedW(0b1),
 		},
 	},
 	// Arithmetic - Add Reg/memory with register to either

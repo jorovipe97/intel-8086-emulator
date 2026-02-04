@@ -189,8 +189,13 @@ func (deco *Decoder) tryDecode(candidateInstruction InstructionEncoding) (Instru
 		var regOperand Operand
 		var modOperand Operand
 
+		fmt.Printf("SR Value: %02b\n", bitsParts[BitsSR]&0b11)
 		if has[BitsReg] {
 			regOperand = getRegOperand(bitsParts[BitsReg], w)
+		} else if has[BitsSR] {
+			regOperand = SegmentRegisterOperand{
+				SegmentRegister: SegmentRegisterName(bitsParts[BitsSR] & 0b11),
+			}
 		}
 
 		if has[BitsMod] {

@@ -25,6 +25,8 @@ const (
 	BitsDisp
 	BitsData
 	BitsWMakesDataWide
+	// Segment register, 00=ES, 01=CS, 10=SS, 11=DS
+	BitsSR
 	BitsCount
 )
 
@@ -158,6 +160,34 @@ func (r RegisterName) String() string {
 	return ""
 }
 
+type SegmentRegisterName int
+
+const (
+	// Extra Segment (00)
+	SegmentRegisterES SegmentRegisterName = iota
+	// Code Segment (01)
+	SegmentRegisterCS
+	// Stack Segment (10)
+	SegmentRegisterSS
+	// Data Segment (11)
+	SegmentRegisterDS
+)
+
+func (r SegmentRegisterName) String() string {
+	switch r {
+	case SegmentRegisterES:
+		return "es"
+	case SegmentRegisterCS:
+		return "cs"
+	case SegmentRegisterSS:
+		return "ss"
+	case SegmentRegisterDS:
+		return "ds"
+	}
+
+	return ""
+}
+
 type RegisterInfo struct {
 	// Which register (A, B, C, D, SP, BP, SI, DI)
 	RegisterName RegisterName
@@ -191,6 +221,12 @@ type ImmediateOperand struct {
 }
 
 func (ImmediateOperand) operandMarker() {}
+
+type SegmentRegisterOperand struct {
+	SegmentRegister SegmentRegisterName
+}
+
+func (SegmentRegisterOperand) operandMarker() {}
 
 type Opcode byte
 
