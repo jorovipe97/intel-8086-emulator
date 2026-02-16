@@ -42,8 +42,8 @@ func (p *AsmPrinter) AddInstruction(instruction Instruction) {
 	// MOV word [BX], 5   ; Store 5 as 16-bit
 	if _, isRegisterOperand := instruction.Operands.destination.(RegisterOperand); !isRegisterOperand {
 		fmt.Println("Not Register Operand...")
-		fmt.Printf("%08b - %08b", instruction.Flags, InstructionFlagWide)
-		if instruction.Flags&InstructionFlagWide == InstructionFlagWide {
+		fmt.Printf("%08b - %08b", instruction.InstructionExtras, InstructionFlagWide)
+		if instruction.InstructionExtras&InstructionFlagWide == InstructionFlagWide {
 			fmt.Fprint(p.stringsBuilder, "word ")
 		} else {
 			fmt.Fprint(p.stringsBuilder, "byte ")

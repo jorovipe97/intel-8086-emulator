@@ -95,6 +95,9 @@ type InstructionEncoding struct {
 	// This is a clever design pattern - by making the sentinel value 0, you automatically get termination
 	// without explicitly adding end markers to every instruction definition.
 	bits [16]InstructionBits
+
+	// This holds all the flags that are affected by this instruction. This is used by the simulator to compute corresponding flags.
+	affectedFlags Flag
 }
 
 type OperandsUsage struct {
@@ -111,15 +114,16 @@ type Instruction struct {
 	RawBits  []byte
 	Parts    [16]InstructionBits
 	// Size in bytes
-	Size     int
-	Operands OperandsUsage
-	Flags    InstructionFlag
+	Size              int
+	Operands          OperandsUsage
+	InstructionExtras InstructionExtra
+	AffectedFlags     Flag
 }
 
-type InstructionFlag int
+type InstructionExtra int
 
 const (
-	InstructionFlagWide InstructionFlag = 1 << iota
+	InstructionFlagWide InstructionExtra = 1 << iota
 )
 
 type RegisterName int
@@ -211,6 +215,7 @@ type MemoryOperand struct {
 func (MemoryOperand) operandMarker() {}
 
 type RegisterOperand struct {
+	// TODO: Remove unnecesary nested Register
 	Register RegisterInfo
 }
 
@@ -228,35 +233,48 @@ type SegmentRegisterOperand struct {
 
 func (SegmentRegisterOperand) operandMarker() {}
 
-type Opcode byte
+type Flag int
 
 const (
-	// MOV destination, sourcce
-	// Register/memory to/from register
-	MovRegisterMemoryToFromRegister Opcode = 0b0010_0010
+	// No flags.
+	FlagNone Flag = 0
 
-	// Immediate to register/memory
-	MovImmediateToRegisterMemory Opcode = 0b0110_0011
+	// Carry Flag (CF) - this flag is set to 1 when there is an unsigned overflow. For example when you add bytes 255 + 1 (result is not in range 0...255). When there is no overflow this flag is set to 0.
+	FlagCF Flag = 1
 
-	// Immediate to register.
-	MovImmediateToRegister Opcode = 0b1011
+	// Parity Flag (PF) - this flag is set to 1 when there is even number of one bits in result, and to 0 when there is odd number of one bits. Even if result is a word only 8 low bits are analyzed!
+	FlagPF Flag = 3
 
-	// Memory to accumulator
-	MovMemoryToAccumulator Opcode = 0b0101_0000
+	// Auxiliary Flag (AF) - set to 1 when there is an unsigned overflow for low nibble (4 bits).
+	FlagAF Flag = 5
 
-	// Accumulator to memory
-	MovAccumulatorToMemory Opcode = 0b0101_0001
+	// Zero Flag (ZF) - set to 1 when result is zero. For none zero result this flag is set to 0.
+	FlagZF Flag = 7
 
-	// Add - Reg/Memory with register to either
-	AddRegMemoryWithRegisterToEither Opcode = 0b0000_0000
-	SubRegMemoryWithRegisterToEither Opcode = 0b0000_1010
-	CmpRegMemoryWithRegisterToEither Opcode = 0b0000_1110
+	// Sign Flag (SF) - set to 1 when result is negative. When result is positive it is set to 0. Actually this flag take the value of the most significant bit.
+	FlagSF Flag = 8
 
-	// Add - Immediate to register/memory
-	ArithmeticImmediateToRegisterMemory Opcode = 0b0010_0000
-
-	// Add - Immediate to accumulator
-	AddImmediateToAccumulator Opcode = 0b0000_0010
-	SubImmediateToAccumulator Opcode = 0b0001_0110
-	CmpImmediateToAccumulator Opcode = 0b0001_1110
+	// Overflow Flag (OF) - set to 1 when there is a signed overflow. For example, when you add bytes 100 + 50 (result is not in range -128...127).
+	FlagOF Flag = 12
 )
+
+func (f Flag) String() string {
+	switch f {
+	case FlagNone:
+		return "FlagNone"
+	case FlagCF:
+		return "FlagCF"
+	case FlagPF:
+		return "FlagPF"
+	case FlagAF:
+		return "FlagAF"
+	case FlagZF:
+		return "FlagZF"
+	case FlagSF:
+		return "FlagSF"
+	case FlagOF:
+		return "FlagOF"
+	}
+
+	return ""
+}

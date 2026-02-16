@@ -1,5 +1,5 @@
 bits 16
 
-mov ah, 0x22 ; ax:0x0->0x2222
-mov al, 0x44 ; bx:0x0->0x4444
-mov bl, ah
+mov bl, 10
+mov ch, 13
+sub bl, ch

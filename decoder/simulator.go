@@ -1,11 +1,15 @@
 package decoder
 
-import "fmt"
+import (
+	"fmt"
+	"math/bits"
+)
 
 type Simulator struct {
 	// First item is unnuced, registers start from index 1 to 8
 	registers        [9]uint16
 	segmentRegisters [4]uint16
+	flags            int
 	asmPrinter       *AsmPrinter
 }
 
@@ -23,7 +27,7 @@ func (s *Simulator) getOperandValue(operand Operand) uint16 {
 		// If is a byte operand, eg: al, bl, cl, dl, ah, bh, ch, dh
 		// then we need to write the appropiate part of the register
 		if specificOperand.Register.Count == 1 {
-			// This is used to remove the mart of the register we are not interested in.
+			// This is used to remove the part of the register we are not interested in.
 			var mask uint16 = 0b00000000_11111111
 			var rightShift uint16 = uint16(specificOperand.Register.Offset) * 8
 			return (s.registers[specificOperand.Register.RegisterName] >> rightShift) & mask
@@ -39,7 +43,6 @@ func (s *Simulator) getOperandValue(operand Operand) uint16 {
 }
 
 func (s *Simulator) ExecInstruction(instruction Instruction) error {
-	fmt.Println("#### Executing Instruction")
 	destinationValue := s.getOperandValue(instruction.Operands.destination)
 	sourceValue := s.getOperandValue(instruction.Operands.source)
 	var finalValue uint16
@@ -50,6 +53,172 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		finalValue = sourceValue
 	case OpAdd:
 		finalValue = destinationValue + sourceValue
+	case OpSub, OpCmp:
+		finalValue = destinationValue - sourceValue
+	}
+
+	// Compute flags.
+	if instruction.AffectedFlags&FlagZF == FlagZF {
+		// When 0, value is not zero
+		zfValue := 0
+		if finalValue == 0 {
+			zfValue = 1
+			if s.asmPrinter != nil {
+				s.asmPrinter.AddComment("ZF set")
+			}
+		}
+
+		s.setFlagValue(FlagZF, zfValue)
+	}
+
+	if instruction.AffectedFlags&FlagSF == FlagSF {
+		// When 0, value is positive
+		sfValue := 0
+		// TODO: Handle byte and word cases
+		if finalValue&(1<<15) != 0 {
+			sfValue = 1
+			if s.asmPrinter != nil {
+				s.asmPrinter.AddComment("SF set")
+			}
+		}
+		s.setFlagValue(FlagSF, sfValue)
+	}
+
+	if instruction.AffectedFlags&FlagPF == FlagPF {
+		// Is 0 when the count is odd.
+		pfValue := 0
+
+		if bits.OnesCount8(uint8(finalValue))&1 == 0 {
+			// Is 1 when the count is even
+			pfValue = 1
+			if s.asmPrinter != nil {
+				s.asmPrinter.AddComment("PF set")
+			}
+		}
+
+		s.setFlagValue(FlagPF, pfValue)
+	}
+
+	// if instruction.AffectedFlags&FlagAF == FlagAF {
+	// 	// Is 0 when the count is odd.
+	// 	afValue := 0
+
+	// 	if bits.OnesCount8(uint8(finalValue))&1 == 0 {
+	// 		// Is 1 when the count is even
+	// 		afValue = 1
+	// 		if s.asmPrinter != nil {
+	// 			s.asmPrinter.AddComment("AF set")
+	// 		}
+	// 	}
+
+	// 	s.setFlagValue(FlagAF, afValue)
+	// }
+
+	if instruction.AffectedFlags&FlagCF == FlagCF {
+		// https://www.youtube.com/watch?v=F20rPdjGI8k
+		cfValue := 0
+
+		// Overflow calculation, depends on the operation
+		switch instruction.Op {
+		case OpAdd:
+			// If the final value is lower than one of the operands
+			// then is because there happened an overflow.
+			if finalValue < destinationValue {
+				cfValue = 1
+				if s.asmPrinter != nil {
+					s.asmPrinter.AddComment("CF set")
+				}
+			}
+		case OpSub, OpCmp:
+			// Checks if value crossed below 0
+			if destinationValue < sourceValue {
+				cfValue = 1
+				if s.asmPrinter != nil {
+					s.asmPrinter.AddComment("CF set")
+				}
+			}
+		}
+
+		s.setFlagValue(FlagCF, cfValue)
+	}
+
+	if instruction.AffectedFlags&FlagOF == FlagOF {
+		ofValue := 0
+
+		// Overflow calculation, depends on the operation
+		switch instruction.Op {
+		case OpAdd:
+			if instruction.InstructionExtras&InstructionFlagWide == InstructionFlagWide {
+				// If operands are positive but result is negative, an overflow happened.
+				positiveOverflow := int16(destinationValue) >= 0 && int16(sourceValue) >= 0 && int16(finalValue) < 0
+
+				// If operands are negative but result is positive or 0, an overflow happened
+				negativeOverflow := int16(destinationValue) <= 0 && int16(sourceValue) <= 0 && int16(finalValue) >= 0
+
+				if positiveOverflow || negativeOverflow {
+					ofValue = 1
+					if s.asmPrinter != nil {
+						s.asmPrinter.AddComment("OF set")
+					}
+				}
+			} else {
+				// If operands are positive but result is negative, an overflow happened.
+				positiveOverflow := int8(destinationValue) >= 0 && int8(sourceValue) >= 0 && int8(finalValue) < 0
+
+				// If operands are negative but result is positive or 0, an overflow happened
+				negativeOverflow := int8(destinationValue) <= 0 && int8(sourceValue) <= 0 && int8(finalValue) >= 0
+
+				if positiveOverflow || negativeOverflow {
+					ofValue = 1
+					if s.asmPrinter != nil {
+						s.asmPrinter.AddComment("OF set")
+					}
+				}
+			}
+		case OpSub, OpCmp:
+			// For sub, an overflow happens if operands have different sign
+			// and the result have a sign different to the first operand
+			// then an overflow happened
+			if instruction.InstructionExtras&InstructionFlagWide == InstructionFlagWide {
+				// For example if:
+				// 1000 0010 ^
+				// 0000 1010
+				// ---------
+				// 1000 1000 (Note the most significate bit is 1, then a negative result indicates signs are different)
+				// We cast to int16, so the result give us a negative number when msb is 1.
+				areOperandsSignsDifferent := int16(destinationValue)^int16(sourceValue) < 0
+
+				// Did result sign changed from sign of first operand?
+				didResultChangedSign := int16(destinationValue)^int16(finalValue) < 0
+
+				if areOperandsSignsDifferent && didResultChangedSign {
+					ofValue = 1
+					if s.asmPrinter != nil {
+						s.asmPrinter.AddComment("OF set")
+					}
+				}
+			} else {
+				areOperandsSignsDifferent := int8(destinationValue)^int8(sourceValue) < 0
+				// Did result sign changed from sign of first operand?
+				didResultChangedSign := int8(destinationValue)^int8(finalValue) < 0
+
+				if areOperandsSignsDifferent && didResultChangedSign {
+					ofValue = 1
+					if s.asmPrinter != nil {
+						s.asmPrinter.AddComment("OF set")
+					}
+				}
+			}
+		}
+
+		s.setFlagValue(FlagOF, ofValue)
+	}
+
+	// Check if instruction is a cmp, This instructions does not writes to destination
+	// operand, just affects flags, this instruction is usually used to control the program
+	// execution flow.
+	if instruction.Op == OpCmp {
+		return nil
 	}
 
 	// Updates simulated memory. Destination can be a register or memory.
@@ -73,7 +242,7 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 			// Resets the part of the register that will be written
 			s.registers[register] = s.registers[register] & ^(mask << leftShift)
 			// Write new value there.
-			s.registers[register] = s.registers[register] | (finalValue << leftShift)
+			s.registers[register] = s.registers[register] | ((finalValue & mask) << leftShift)
 		} else {
 			s.registers[register] = finalValue
 		}
@@ -92,6 +261,38 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 	}
 
 	return nil
+}
+
+func (s *Simulator) setFlagValue(flag Flag, value int) {
+	if flag == FlagNone {
+		// No flag should be affected.
+		return
+	}
+
+	if value != 0 && value != 1 {
+		// Value can only be a 1 or 0. Maybe use a bool parameter?
+		return
+	}
+
+	// We substract 1 to the flag because enum values start at 1,
+	// to let the 0 value as the FlagNone
+	// - compute flag offset
+	flagOffset := int(flag - 1)
+	// - reset flag position
+	s.flags = s.flags & ^(1 << flagOffset)
+	// - sets new value into flag position
+	s.flags = s.flags | (value << flagOffset)
+}
+
+func (s *Simulator) getFlagValue(flag Flag) int {
+	if flag == FlagNone {
+		return 0
+	}
+
+	// We substract 1 to the flag because enum values start at 1,
+	// to let the 0 value as the FlagNone
+	flagOffset := flag - 1
+	return (s.flags & (1 << int(flagOffset))) >> int(flagOffset)
 }
 
 func (s *Simulator) String() string {

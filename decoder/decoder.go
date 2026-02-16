@@ -7,6 +7,7 @@ import (
 )
 
 // Details of the mov operation are after page 256 of 8086 user's manual
+// Details of the registers, and flags is in page 30
 
 // Reads an array of binary instructions and iterates over each instruction.
 type Decoder struct {
@@ -180,9 +181,10 @@ func (deco *Decoder) tryDecode(candidateInstruction InstructionEncoding) (Instru
 		result.RawBits = deco.Data[deco.pos:internalPosition.pos]
 		result.Parts = candidateInstruction.bits
 		result.Mnemonic = candidateInstruction.mnemonic
+		result.AffectedFlags = candidateInstruction.affectedFlags
 
 		if has[BitsW] && bitsParts[BitsW] == 0b1 {
-			result.Flags |= InstructionFlagWide
+			result.InstructionExtras |= InstructionFlagWide
 		}
 
 		// Instruction source is specified in REG field

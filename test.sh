@@ -1,4 +1,4 @@
-file=listing_0045_challenge_register_movs
+file=listing_0046_add_sub_cmp
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm

@@ -9,6 +9,8 @@ import (
 	deco "github.com/jorovipe97/performance-aware-homework/decoder"
 )
 
+// 8086 nice tutorial: https://yassinebridi.github.io/asm-docs/
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("The filename arg is required.")

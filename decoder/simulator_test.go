@@ -1,6 +1,8 @@
 package decoder
 
-import "testing"
+import (
+	"testing"
+)
 
 type registerExpectedValue struct {
 	Name  RegisterName
@@ -86,6 +88,154 @@ nextTextCase:
 			if _simulator.segmentRegisters[expected.Name] != expected.Value {
 				t.Errorf("Register %v expected %04x, got %04x", expected.Name, expected.Value, _simulator.segmentRegisters[expected.Name])
 				continue nextTextCase
+			}
+		}
+	}
+}
+
+type testSimulatorFlagsExpectedValues struct {
+	flag          Flag
+	expectedValue int
+}
+
+type testCaseSimulatorFlags struct {
+	operation                        OperationType
+	destinationValue                 uint16
+	sourceValue                      uint16
+	isByte                           bool
+	testSimulatorFlagsExpectedValues []testSimulatorFlagsExpectedValues
+}
+
+var testCasesSimulatorFlags = []testCaseSimulatorFlags{
+	{
+		operation:        OpAdd,
+		destinationValue: 0b00000000_01100100, // 100
+		sourceValue:      0b11111111_00111000, // -200
+		testSimulatorFlagsExpectedValues: []testSimulatorFlagsExpectedValues{
+			{flag: FlagCF, expectedValue: 0},
+			{flag: FlagZF, expectedValue: 0},
+			{flag: FlagSF, expectedValue: 1},
+			{flag: FlagOF, expectedValue: 0},
+			{flag: FlagPF, expectedValue: 1},
+		},
+	},
+	{
+		operation:        OpAdd,
+		destinationValue: 61443,
+		sourceValue:      3841,
+		testSimulatorFlagsExpectedValues: []testSimulatorFlagsExpectedValues{
+			{flag: FlagCF, expectedValue: 0},
+			{flag: FlagZF, expectedValue: 0},
+			{flag: FlagSF, expectedValue: 1},
+			{flag: FlagOF, expectedValue: 0},
+			{flag: FlagPF, expectedValue: 0},
+		},
+	},
+	{
+		operation:        OpSub,
+		destinationValue: 61443, // 100
+		sourceValue:      61443, // 100
+		testSimulatorFlagsExpectedValues: []testSimulatorFlagsExpectedValues{
+			{flag: FlagCF, expectedValue: 0},
+			{flag: FlagZF, expectedValue: 1},
+			{flag: FlagSF, expectedValue: 0},
+			{flag: FlagOF, expectedValue: 0},
+			{flag: FlagPF, expectedValue: 1},
+		},
+	},
+	{
+		operation:        OpSub,
+		destinationValue: 10,
+		sourceValue:      13,
+		testSimulatorFlagsExpectedValues: []testSimulatorFlagsExpectedValues{
+			{flag: FlagCF, expectedValue: 1},
+			{flag: FlagZF, expectedValue: 0},
+			{flag: FlagSF, expectedValue: 1},
+			{flag: FlagOF, expectedValue: 0},
+			{flag: FlagPF, expectedValue: 0},
+		},
+		isByte: true,
+	},
+}
+
+func TestSimulatorFlags(t *testing.T) {
+	for _, testCase := range testCasesSimulatorFlags {
+		simulator := NewSimulator(nil)
+		simulator.registers[RegisterB] = testCase.destinationValue
+		simulator.registers[RegisterC] = testCase.sourceValue
+
+		instruction := Instruction{
+			Op: testCase.operation,
+			Operands: OperandsUsage{
+				destination: RegisterOperand{
+					Register: RegisterInfo{
+						RegisterName: RegisterB,
+						Offset:       0,
+						Count:        2,
+					},
+				},
+				source: RegisterOperand{
+					Register: RegisterInfo{
+						RegisterName: RegisterC,
+						Offset:       0,
+						Count:        2,
+					},
+				},
+			},
+			AffectedFlags:     arithmeticAndLogicFlags,
+			InstructionExtras: InstructionFlagWide,
+		}
+
+		if testCase.isByte {
+			// Adds a garbage value to BH to test edge cases, we use BL
+			simulator.registers[RegisterB] = (11 << 8) | testCase.destinationValue
+
+			// Adds garbage to CL to test edge cases, we use CH
+			simulator.registers[RegisterC] = (testCase.sourceValue << 8) | 11
+
+			instruction.Operands = OperandsUsage{
+				destination: RegisterOperand{
+					Register: RegisterInfo{
+						RegisterName: RegisterB, // BL
+						Offset:       0,
+						Count:        1,
+					},
+				},
+				source: RegisterOperand{
+					Register: RegisterInfo{
+						RegisterName: RegisterC, // CH
+						Offset:       1,
+						Count:        1,
+					},
+				},
+			}
+			instruction.InstructionExtras = 0
+		}
+
+		err := simulator.ExecInstruction(instruction)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// TODO: If is a byte then validates untouched parts of the registry to verify everything i ok
+		if testCase.isByte {
+			// A garbage value was added to bh. we check that value continues untouched.
+			// Adds a garbage value to BH to test edge cases, we use BL
+			var garbageValue uint16 = (11 << 8)
+			if simulator.registers[RegisterB]&garbageValue != garbageValue {
+				t.Error("value in bh was modified even tough it should continue invariant.")
+			}
+
+			if simulator.registers[RegisterC]&11 != 11 {
+				t.Error("value in cl was modified even tough it should continue invariant.")
+			}
+		}
+
+		for _, flagCase := range testCase.testSimulatorFlagsExpectedValues {
+			if simulator.getFlagValue(flagCase.flag) != flagCase.expectedValue {
+				t.Errorf("%v expected %v, but got: %v", flagCase.flag, flagCase.expectedValue, simulator.getFlagValue(flagCase.flag))
+				continue
 			}
 		}
 	}

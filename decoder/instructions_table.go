@@ -10,6 +10,11 @@ var sr = InstructionBits{Usage: BitsSR, BitCount: 2}
 var data = InstructionBits{Usage: BitsData}
 var dataIfW = InstructionBits{Usage: BitsWMakesDataWide, Value: 1}
 
+// The group of ADD, SUB,CMP, AND, TEST, OR, XOR. affect these flags only:
+// CF, ZF, SF, OF, PF, AF.
+// https://yassinebridi.github.io/asm-docs/
+var arithmeticAndLogicFlags = FlagCF | FlagZF | FlagSF | FlagOF | FlagPF | FlagAF
+
 // Some operations dont have some fields, we implied them so decoder works as expected
 func impliedReg(value uint8) InstructionBits {
 	return InstructionBits{
@@ -177,6 +182,7 @@ var instructionsTable = [...]InstructionEncoding{
 			reg,
 			rm,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Immediate to register/memory
 	{
@@ -192,6 +198,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Immediate to accumulator
 	{
@@ -205,6 +212,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Sub Reg/memory with register to either
 	{
@@ -218,6 +226,7 @@ var instructionsTable = [...]InstructionEncoding{
 			reg,
 			rm,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Sub Immediate from register/memory
 	{
@@ -233,6 +242,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Sub Immediate to accumulator
 	{
@@ -246,6 +256,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Cmp Reg/memory with register to either
 	{
@@ -259,6 +270,7 @@ var instructionsTable = [...]InstructionEncoding{
 			reg,
 			rm,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Cmp Immediate from register/memory
 	{
@@ -274,6 +286,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 	// Arithmetic - Sub Immediate to accumulator
 	{
@@ -287,6 +300,7 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 			dataIfW,
 		},
+		affectedFlags: arithmeticAndLogicFlags,
 	},
 }
 
