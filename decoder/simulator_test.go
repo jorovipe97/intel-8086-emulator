@@ -14,10 +14,16 @@ type segmentRegisterExpectedValue struct {
 	Value uint16
 }
 
+type flagsExpectedValue struct {
+	Flag  Flag
+	Value int
+}
+
 type simulatorTestCase struct {
 	InputBinaryStream             []byte
 	RegistersExpectedValues       []registerExpectedValue
 	SegmentRegisterExpectedValues []segmentRegisterExpectedValue
+	FlagsExpectedValues           []flagsExpectedValue
 }
 
 var simulatorCases = []simulatorTestCase{
@@ -45,6 +51,31 @@ var simulatorCases = []simulatorTestCase{
 			{Name: SegmentRegisterES, Value: 0x6677},
 			{Name: SegmentRegisterSS, Value: 0x4411},
 			{Name: SegmentRegisterDS, Value: 0x3344},
+		},
+	},
+	{
+		InputBinaryStream: []byte{
+			0b10000001, 0b11000011, 0b00110000, 0b01110101, 0b10000001, 0b11000011, 0b00010000,
+			0b00100111, 0b10000001, 0b11101011, 0b10001000, 0b00010011, 0b10000001, 0b11101011,
+			0b10001000, 0b00010011, 0b10111011, 0b00000001, 0b00000000, 0b10111001, 0b01100100,
+			0b00000000, 0b00000001, 0b11001011, 0b10111010, 0b00001010, 0b00000000, 0b00101001,
+			0b11010001, 0b10000001, 0b11000011, 0b01000000, 0b10011100, 0b10000011, 0b11000001,
+			0b10100110, 0b10111100, 0b01100011, 0b00000000, 0b10111101, 0b01100010, 0b00000000,
+			0b00111001, 0b11100101,
+		},
+		RegistersExpectedValues: []registerExpectedValue{
+			{Name: RegisterB, Value: 0x9ca5},
+			{Name: RegisterD, Value: 0x000a},
+			{Name: RegisterSP, Value: 0x0063},
+			{Name: RegisterBP, Value: 0x0062},
+		},
+		FlagsExpectedValues: []flagsExpectedValue{
+			{Flag: FlagCF, Value: 1},
+			{Flag: FlagZF, Value: 0},
+			{Flag: FlagSF, Value: 1},
+			// {flag: FlagAF, expectedValue: 1}, // We dont support this flag.
+			{Flag: FlagOF, Value: 0},
+			{Flag: FlagPF, Value: 1},
 		},
 	},
 }
