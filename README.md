@@ -15,8 +15,8 @@ Here I implement a partial intel 8086 disassembler + emulator. This does not pla
 The easiest way to run it is just running [./test.sh](https://github.com/jorovipe97/performance-aware-homework/blob/main/test.sh) file, this files does the following:
 
 1. Compiles an 8086 binary using nasm and an original assembly file.
-2. Run my emulator so it loads the produced binary, the binary outputs the assembly and the final values of registers and flags.
-3. Runs again nasm but this time using the produced binary in step 2.
+2. Run my emulator so it loads the produced binary, it outputs the assembly and the final values of registers and flags.
+3. Runs again nasm but this time using the assembly produced in step 2.
 4. Runs cmp to check if binary produced at step 1 and 3 are equal.
 
 ### Final Notes
