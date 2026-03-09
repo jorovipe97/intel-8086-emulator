@@ -1,4 +1,4 @@
-file=listing_0047_challenge_flags
+file=listing_0048_ip_register
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm

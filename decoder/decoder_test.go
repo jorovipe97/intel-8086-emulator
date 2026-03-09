@@ -145,9 +145,8 @@ var cases = [...]testCase{
 
 func TestDisasembling(t *testing.T) {
 	for _, singleCase := range cases {
-		deco := Decoder{
-			Data: singleCase.InputBinaryStream,
-		}
+		memory := NewMemory(singleCase.InputBinaryStream)
+		deco := NewDecoder(memory)
 		disAsm := NewAsmPrinter()
 
 		instr, err := deco.NextInstruction()

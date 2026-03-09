@@ -36,13 +36,14 @@ func main() {
 	fmt.Printf("%08b\n", data)
 
 	asmPrinter := deco.NewAsmPrinter()
-	decoder := deco.NewDecoder(data)
+	memory := deco.NewMemory(data)
+	decoder := deco.NewDecoder(memory)
 	simulator := deco.NewSimulator(asmPrinter)
 
 	asmPrinter.AddComment(fileName)
 	asmPrinter.Bits16Header()
 	for {
-		if !decoder.HasNext() {
+		if !memory.HasMoreInstructions() {
 			break
 		}
 
