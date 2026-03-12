@@ -34,6 +34,10 @@ func (m *Memory) HasMoreInstructions() bool {
 	return (m.AbsolutePosition + 1) < len(m.Data)
 }
 
+func (m *Memory) GetIPRegister() uint16 {
+	return uint16(m.AbsolutePosition)
+}
+
 func (m *Memory) GetByteAtPosition(position int) (byte, error) {
 	if position >= len(m.Data) && position < 0 {
 		return 0, errors.New("position is out of instructions range")
@@ -41,6 +45,11 @@ func (m *Memory) GetByteAtPosition(position int) (byte, error) {
 	return m.Data[position], nil
 }
 
+func (m *Memory) ResetAbsolutePosition() {
+	m.AbsolutePosition = 0
+}
+
+// Not that increment can be negative and it will be a decrement
 func (m *Memory) IncrementPosition(increment int) {
 	m.AbsolutePosition += increment
 }

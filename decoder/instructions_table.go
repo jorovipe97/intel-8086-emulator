@@ -302,6 +302,31 @@ var instructionsTable = [...]InstructionEncoding{
 		},
 		affectedFlags: arithmeticAndLogicFlags,
 	},
+	// JNE/JNZ = Jump on not equal/not zero
+	{
+		op:       OpJNZ,
+		mnemonic: "jnz",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b0111_0101},
+			// // 000 -> AX when w is 1. Or AL when w is 0.
+			// impliedReg(0b000),
+			// impliedW(1),
+			// // Instruction destination is always in the reg field.
+			// impliedD(0b1),
+
+			// Altough this is x86 reference, the jmp instructions has a single destination operand.
+			// See: https://www.felixcloutier.com/x86/jmp
+			// For this case, the target operand specifies a relative offset (a signed displacement relative to the current value of the instruction pointer in the IP register).
+			// A near jump to a relative offset of 8-bits (rel8) is referred to as a short jump. The CS register is not changed on near and short jumps.
+			//
+			// The BitsIpInc is to indicate that the destination operand is an Instruction Pointer Increment
+			// However the actual data is extracted from data.
+			{Usage: BitsIpInc},
+			// 8-bit IP increment.
+			impliedW(0),
+			data,
+		},
+	},
 }
 
 // NOTE(casey): This is the "Intel-specified" maximum length of an instruction, including prefixes\

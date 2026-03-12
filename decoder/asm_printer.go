@@ -40,8 +40,13 @@ func (p *AsmPrinter) AddInstruction(instruction Instruction) {
 	// So you MUST specify:
 	// MOV byte [BX], 5   ; Store 5 as 8-bit
 	// MOV word [BX], 5   ; Store 5 as 16-bit
-	if _, isRegisterOperand := instruction.Operands.destination.(RegisterOperand); !isRegisterOperand {
-		fmt.Println("Not Register Operand...")
+	//
+	// If destination is not register or a insutrction pointer increment do not add size of destination.
+	switch instruction.Operands.destination.(type) {
+	case RegisterOperand, InstructionPointerIncrementOperand:
+		fmt.Println("Instruction is a RegisterOperand or InstructionPointerIncrementOperand, ")
+	default:
+		fmt.Println("Not Register Operand nor Instruction Pointer Increment Operand...")
 		fmt.Printf("%08b - %08b", instruction.InstructionExtras, InstructionFlagWide)
 		if instruction.InstructionExtras&InstructionFlagWide == InstructionFlagWide {
 			fmt.Fprint(p.stringsBuilder, "word ")
@@ -50,13 +55,13 @@ func (p *AsmPrinter) AddInstruction(instruction Instruction) {
 		}
 	}
 
-	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.destination))
+	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.destination, instruction.Size))
 	fmt.Fprint(p.stringsBuilder, separator)
-	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.source))
+	fmt.Fprint(p.stringsBuilder, printOperand(instruction.Operands.source, instruction.Size))
 	fmt.Fprint(p.stringsBuilder, "\n")
 }
 
-func printOperand(operand Operand) string {
+func printOperand(operand Operand, instructionSize int) string {
 	fmt.Println("Printing Operand...")
 
 	if operand == nil {
@@ -75,6 +80,18 @@ func printOperand(operand Operand) string {
 		return fmt.Sprintf("%v", specificOperand.Value)
 	case SegmentRegisterOperand:
 		return specificOperand.SegmentRegister.String()
+	case InstructionPointerIncrementOperand:
+		// In NASM, the $ symbol is a special token that represents the current
+		// address of the line being assembled. It is essentially a "you are here"
+		// marker for the assembler.
+		//
+		// We need to do this because if we used the offset value directly, nasm will interpret it
+		// as an absolute address.
+		//
+		// So we convert the relative offset to an absolute address so that when nasm assembles the generated assembly
+		// it returns a correct binary. This is just needed for assembler, instruction jumps are always relative according to cpu.
+		// If you look at the raw binary you will see the actual relative jump.
+		return fmt.Sprintf("$+%v+%v", instructionSize, specificOperand.Increment)
 	}
 
 	fmt.Println("Unknown operand type")

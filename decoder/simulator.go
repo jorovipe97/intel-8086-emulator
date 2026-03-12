@@ -10,36 +10,15 @@ type Simulator struct {
 	registers        [9]uint16
 	segmentRegisters [4]uint16
 	flags            int
+	memory           *Memory
 	asmPrinter       *AsmPrinter
 }
 
-func NewSimulator(printer *AsmPrinter) *Simulator {
+func NewSimulator(memory *Memory, printer *AsmPrinter) *Simulator {
 	return &Simulator{
+		memory:     memory,
 		asmPrinter: printer,
 	}
-}
-
-func (s *Simulator) getOperandValue(operand Operand) uint16 {
-	switch specificOperand := operand.(type) {
-	case ImmediateOperand:
-		return uint16(specificOperand.Value)
-	case RegisterOperand:
-		// If is a byte operand, eg: al, bl, cl, dl, ah, bh, ch, dh
-		// then we need to write the appropiate part of the register
-		if specificOperand.Register.Count == 1 {
-			// This is used to remove the part of the register we are not interested in.
-			var mask uint16 = 0b00000000_11111111
-			var rightShift uint16 = uint16(specificOperand.Register.Offset) * 8
-			return (s.registers[specificOperand.Register.RegisterName] >> rightShift) & mask
-		}
-
-		// If reaches here we are in a word operand, eg: ax, bx, cx, dx
-		return s.registers[specificOperand.Register.RegisterName]
-	case SegmentRegisterOperand:
-		return s.segmentRegisters[specificOperand.SegmentRegister&0b11]
-	}
-
-	return 0
 }
 
 func (s *Simulator) ExecInstruction(instruction Instruction) error {
@@ -258,9 +237,42 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		if s.asmPrinter != nil {
 			s.asmPrinter.AddComment(fmt.Sprintf("%v: %v -> %v", registerName.String(), prevValue, s.segmentRegisters[registerName]))
 		}
+	case InstructionPointerIncrementOperand:
+		switch instruction.Op {
+		case OpJNZ:
+			if s.getFlagValue(FlagZF) == 0 {
+				s.memory.IncrementPosition(destinationOperand.Increment)
+			}
+		}
 	}
 
+	// TODO: Implement IP register and interaction with memory
+	// Maybe move where we incrmente absolute position to this function?. But then decoder wont work without simulator, bad design?
+
 	return nil
+}
+
+func (s *Simulator) getOperandValue(operand Operand) uint16 {
+	switch specificOperand := operand.(type) {
+	case ImmediateOperand:
+		return uint16(specificOperand.Value)
+	case RegisterOperand:
+		// If is a byte operand, eg: al, bl, cl, dl, ah, bh, ch, dh
+		// then we need to write the appropiate part of the register
+		if specificOperand.Register.Count == 1 {
+			// This is used to remove the part of the register we are not interested in.
+			var mask uint16 = 0b00000000_11111111
+			var rightShift uint16 = uint16(specificOperand.Register.Offset) * 8
+			return (s.registers[specificOperand.Register.RegisterName] >> rightShift) & mask
+		}
+
+		// If reaches here we are in a word operand, eg: ax, bx, cx, dx
+		return s.registers[specificOperand.Register.RegisterName]
+	case SegmentRegisterOperand:
+		return s.segmentRegisters[specificOperand.SegmentRegister&0b11]
+	}
+
+	return 0
 }
 
 func (s *Simulator) setFlagValue(flag Flag, value int) {
@@ -308,6 +320,7 @@ func (s *Simulator) String() string {
 	out += s.showSegmentRegisterValue(SegmentRegisterES)
 	out += s.showSegmentRegisterValue(SegmentRegisterSS)
 	out += s.showSegmentRegisterValue(SegmentRegisterDS)
+	out += s.showIpRegister()
 
 	return out
 }
@@ -320,4 +333,9 @@ func (s *Simulator) showRegisterValue(registerName RegisterName) string {
 func (s *Simulator) showSegmentRegisterValue(segmentRegisterName SegmentRegisterName) string {
 	registerValue := s.segmentRegisters[segmentRegisterName]
 	return fmt.Sprintf("\t - %v: 0x%04x (%v)\n", segmentRegisterName.String(), registerValue, registerValue)
+}
+
+func (s *Simulator) showIpRegister() string {
+	ipRegister := s.memory.GetIPRegister()
+	return fmt.Sprintf("\t - ip: 0x%04x (%v)", ipRegister, ipRegister)
 }

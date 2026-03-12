@@ -1,4 +1,4 @@
-file=listing_0048_ip_register
+file=test-asm
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +11,7 @@ import (
 )
 
 // 8086 nice tutorial: https://yassinebridi.github.io/asm-docs/
-
+// 8086 cool simulator: https://yjdoc2.github.io/8086-emulator-web/compile
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("The filename arg is required.")
@@ -38,31 +39,30 @@ func main() {
 	asmPrinter := deco.NewAsmPrinter()
 	memory := deco.NewMemory(data)
 	decoder := deco.NewDecoder(memory)
-	simulator := deco.NewSimulator(asmPrinter)
+	simulator := deco.NewSimulator(memory, asmPrinter)
 
 	asmPrinter.AddComment(fileName)
 	asmPrinter.Bits16Header()
+
+	var disasmErr error
+	// Dis-assembler loop, we iterate over the whole memory
+	// ignoring jumps to get all the instructions in the binary
 	for {
 		if !memory.HasMoreInstructions() {
 			break
 		}
 
-		instr, err := decoder.NextInstruction()
-		if err != nil {
-			fmt.Println(err)
+		var instr deco.Instruction
+		instr, disasmErr = decoder.NextInstruction()
+		if disasmErr != nil {
 			asmPrinter.AddComment(fmt.Sprintf("ERROR: %v", err))
 			break
 		}
 
 		if instr.Op != deco.OpNone {
 			asmPrinter.AddInstruction(instr)
-			if shouldSimulate {
-				err := simulator.ExecInstruction(instr)
-				if err != nil {
-					asmPrinter.AddComment("ERROR: Error simulating instruction.")
-				}
-			}
 		} else {
+			disasmErr = errors.New("unrecognized binary in instruction stream")
 			asmPrinter.AddComment("ERROR: Unrecognized binary in instruction stream.")
 			break
 		}
@@ -71,7 +71,6 @@ func main() {
 	// Shows assembly code:
 	asmString := asmPrinter.String()
 	fmt.Println(asmString)
-	fmt.Println(simulator.String())
 
 	// Saves the final assembly into disk.
 	newAsmFile := filepath.Join(wd, "result.asm")
@@ -79,4 +78,37 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// If disassembly failed, then do not simulate
+	if disasmErr != nil {
+		fmt.Println(disasmErr)
+		return
+	}
+
+	// Skip simulation if --simulate flag is not passed.
+	if !shouldSimulate {
+		return
+	}
+
+	// Simulator loop, we execute the instructions, including jumps
+	// Reset memory position so we start executing instructions from the beginning
+	memory.ResetAbsolutePosition()
+	for {
+		instr, err := decoder.NextInstruction()
+		if err != nil {
+			asmPrinter.AddComment(fmt.Sprintf("ERROR: %v", err))
+			break
+		}
+
+		if instr.Op != deco.OpNone {
+			err := simulator.ExecInstruction(instr)
+			if err != nil {
+				asmPrinter.AddComment("ERROR: Error simulating instruction.")
+			}
+		} else {
+			break
+		}
+	}
+
+	fmt.Println(simulator.String())
 }

@@ -4,13 +4,11 @@
 // see: https://zed.dev/docs/debugger
 [
   {
+    "label": "Debug main package",
     "adapter": "Delve",
-    "label": "go run main.go",
     "request": "launch",
     "mode": "debug",
-    "program": "./main.go",
-    "cwd": "$ZED_CUSTOM_GO_MODULE_ROOT",
-    "buildFlags": [],
-    "env": {},
+    "program": ".",
+    "args": ["test-asm", "--simulate"],
   },
 ]

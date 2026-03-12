@@ -12,7 +12,6 @@ import (
 // Reads an array of binary instructions and iterates over each instruction.
 type Decoder struct {
 	Data   []byte
-	pos    int
 	memory *Memory
 }
 
@@ -191,6 +190,12 @@ func (deco *Decoder) tryDecode(candidateInstruction InstructionEncoding) (Instru
 			regOperand = SegmentRegisterOperand{
 				SegmentRegister: SegmentRegisterName(bitsParts[BitsSR] & 0b11),
 			}
+		} else if has[BitsIpInc] {
+			// TODO: Use implicit w field to handle 16-bit ip increments
+			// for now we assume everything is 8 bit increments.
+			modOperand = InstructionPointerIncrementOperand{
+				Increment: bitsParts[BitsData],
+			}
 		}
 
 		if has[BitsMod] {
@@ -265,13 +270,15 @@ func (deco *Decoder) tryDecode(candidateInstruction InstructionEncoding) (Instru
 		} else if !has[BitsReg] {
 			// Some operations don have reg field, eg: the mov immediate to register/memory
 			// eg: mov [bp + di], byte 7
+			// Or the jumps
+			// eg: jnz -120
 			result.Operands.destination = modOperand
 		}
 
 		// NOTE(casey): Because there are some strange opcodes that do things like have an immediate as
 		// a _destination_ ("out", for example), I define immediates and other "additional operands" to
 		// go in "whatever slot was not used by the reg and mod fields".
-		if has[BitsData] {
+		if has[BitsData] && !has[BitsIpInc] {
 			if result.Operands.source == nil {
 				result.Operands.source = ImmediateOperand{
 					Value: int16(bitsParts[BitsData]),
@@ -290,7 +297,6 @@ func (deco *Decoder) tryDecode(candidateInstruction InstructionEncoding) (Instru
 }
 
 func (deco *Decoder) parseDispValue(currentPosition *internalPos, mod int, dispIsW bool) int {
-	// TODO: Handle sign extension....
 	var displacement int
 	if dispIsW {
 		// Memory mode, 16-bit displacement follows

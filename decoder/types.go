@@ -8,6 +8,9 @@ const (
 	OpAdd
 	OpSub
 	OpCmp
+
+	// Jump if Not Zero (Not Equal).
+	OpJNZ
 )
 
 type InstructionBitsUsage uint8
@@ -27,6 +30,8 @@ const (
 	BitsWMakesDataWide
 	// Segment register, 00=ES, 01=CS, 10=SS, 11=DS
 	BitsSR
+	// Signed increment value to instruction pointer (IP). It's a signed number because we can jump back and forth.
+	BitsIpInc
 	BitsCount
 )
 
@@ -232,6 +237,15 @@ type SegmentRegisterOperand struct {
 }
 
 func (SegmentRegisterOperand) operandMarker() {}
+
+// We store both 8-bit increments and 16-bit increments in the same operand type.
+type InstructionPointerIncrementOperand struct {
+	Increment int
+}
+
+func (InstructionPointerIncrementOperand) operandMarker() {}
+
+// TODO: Just create a new type of operand?
 
 type Flag int
 
