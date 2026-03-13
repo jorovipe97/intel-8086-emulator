@@ -11,6 +11,9 @@ const (
 
 	// Jump if Not Zero (Not Equal).
 	OpJNZ
+
+	// Jump if Zero (Equal).
+	OpJZ
 )
 
 type InstructionBitsUsage uint8

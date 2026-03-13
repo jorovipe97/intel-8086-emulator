@@ -9,6 +9,7 @@ var d = InstructionBits{Usage: BitsD, BitCount: 1}
 var sr = InstructionBits{Usage: BitsSR, BitCount: 2}
 var data = InstructionBits{Usage: BitsData}
 var dataIfW = InstructionBits{Usage: BitsWMakesDataWide, Value: 1}
+var ipInc = InstructionBits{Usage: BitsIpInc}
 
 // The group of ADD, SUB,CMP, AND, TEST, OR, XOR. affect these flags only:
 // CF, ZF, SF, OF, PF, AF.
@@ -321,7 +322,19 @@ var instructionsTable = [...]InstructionEncoding{
 			//
 			// The BitsIpInc is to indicate that the destination operand is an Instruction Pointer Increment
 			// However the actual data is extracted from data.
-			{Usage: BitsIpInc},
+			ipInc,
+			// 8-bit IP increment.
+			impliedW(0),
+			data,
+		},
+	},
+	// JNE/JNZ = Jump on not equal/not zero
+	{
+		op:       OpJZ,
+		mnemonic: "jz",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b0111_0100},
+			ipInc,
 			// 8-bit IP increment.
 			impliedW(0),
 			data,

@@ -1,4 +1,4 @@
-file=listing_0049_conditional_jumps
+file=test-asm
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm

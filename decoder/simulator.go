@@ -200,6 +200,10 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 			if s.getFlagValue(FlagZF) == 0 {
 				s.memory.IncrementPosition(destinationOperand.Increment)
 			}
+		case OpJZ:
+			if s.getFlagValue(FlagZF) == 1 {
+				s.memory.IncrementPosition(destinationOperand.Increment)
+			}
 		}
 	}
 
