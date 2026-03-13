@@ -16,6 +16,11 @@ const (
 	OpJP
 	// Jump if Carry (Below, Not Above Equal).
 	OpJB
+	// 1. Automatically substracts 1 from the CX (Count) register.
+	// 2. Check if loop should continue (should jump) if:
+	// - If CX is not 0 (loop have not finished)
+	// If condation fails program continues to next instruction
+	OpLoop
 	// Loop while not zero, Combines three operations into one:
 	// 1. Automatically subtracts 1 from the CX (Count) register.
 	// 2. Check if loop should continue (eg: should jump) if:

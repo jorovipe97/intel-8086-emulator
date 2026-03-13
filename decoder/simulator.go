@@ -218,6 +218,13 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 			if s.registers[RegisterC] != 0 && s.getFlagValue(FlagCF) == 0 {
 				s.memory.IncrementPosition(destinationOperand.Increment)
 			}
+		case OpLoop:
+			// Decremtn CX register
+			s.registers[RegisterC] -= 1
+
+			if s.registers[RegisterC] != 0 {
+				s.memory.IncrementPosition(destinationOperand.Increment)
+			}
 		}
 	}
 

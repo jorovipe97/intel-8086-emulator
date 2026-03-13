@@ -1,13 +1,6 @@
-; listing_0050_challenge_jumps
+; test-asm
 bits 16
+mov cx, 4
 mov ax, 10
-mov bx, 10
-mov cx, 10
-cmp bx, cx
-jz $+2+5
-add ax, 1
-jp $+2+5
-sub bx, 5
-jb $+2+3
-sub cx, 2
-loopnz $+2+-19
+add ax, 10
+loop $+2+-5

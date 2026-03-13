@@ -106,6 +106,24 @@ var simulatorCases = []simulatorTestCase{
 			{Flag: FlagPF, Value: 1},
 		},
 	},
+	{
+		// bits 16
+		// mov cx, 4
+		// mov ax, 10
+		// my_loop:
+		// add ax, 10
+		// loop my_loop
+		Name: "loop using loop instruction",
+		InputBinaryStream: []byte{
+			0b10111001, 0b00000100, 0b00000000, 0b10111000, 0b00001010, 0b00000000,
+			0b10000011, 0b11000000, 0b00001010, 0b11100010, 0b11111011,
+		},
+		RegistersExpectedValues: []registerExpectedValue{
+			{Name: RegisterA, Value: 50},
+		},
+		InstructionPointerExpectedValue: 11,
+		FlagsExpectedValues:             []flagsExpectedValue{},
+	},
 }
 
 func TestSimulator(t *testing.T) {
