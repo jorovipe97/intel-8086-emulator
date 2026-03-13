@@ -212,6 +212,12 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 			if s.getFlagValue(FlagCF) == 1 {
 				s.memory.IncrementPosition(destinationOperand.Increment)
 			}
+		case OpLoopNZ:
+			// Decrement CX register
+			s.registers[RegisterC] -= 1
+			if s.registers[RegisterC] != 0 && s.getFlagValue(FlagCF) == 0 {
+				s.memory.IncrementPosition(destinationOperand.Increment)
+			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-file=test-asm
+file=listing_0050_challenge_jumps
 
 echo "Assemblying original file..."
 ./nasm listings/$file.asm
