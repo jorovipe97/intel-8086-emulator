@@ -28,6 +28,18 @@ const (
 	// - Zero Flag is zero (Zero flag has not been set)
 	// 3.If either condition fails program continues to next instruction.
 	//
+	// Typical use case: Scan an array until find an un-matching element.
+	// It can be used to check if all element in an array are equal break if not.
+	//
+	// The automatic substraction to CX do not affect flags.
+	OpLoopZ
+	// Loop while not zero, Combines three operations into one:
+	// 1. Automatically subtracts 1 from the CX (Count) register.
+	// 2. Check if loop should continue (eg: should jump) if:
+	// - CX is not zero (Counter have not finished)
+	// - Zero Flag is zero (Zero flag has not been set)
+	// 3.If either condition fails program continues to next instruction.
+	//
 	// Typical use case: Scan an array until find a matching element.
 	//
 	// The automatic substraction to CX do not affect flags.

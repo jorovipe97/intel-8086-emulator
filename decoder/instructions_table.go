@@ -374,6 +374,17 @@ var instructionsTable = [...]InstructionEncoding{
 		},
 	},
 	{
+		op:       OpLoopZ,
+		mnemonic: "loopz",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b1110_0001},
+			ipInc,
+			// 8-bit IP increment.
+			impliedW(0),
+			data,
+		},
+	},
+	{
 		op:       OpLoopNZ,
 		mnemonic: "loopnz",
 		bits: [16]InstructionBits{

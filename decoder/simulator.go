@@ -215,13 +215,18 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		case OpLoopNZ:
 			// Decrement CX register
 			s.registers[RegisterC] -= 1
-			if s.registers[RegisterC] != 0 && s.getFlagValue(FlagCF) == 0 {
+			if s.registers[RegisterC] != 0 && s.getFlagValue(FlagZF) == 0 {
+				s.memory.IncrementPosition(destinationOperand.Increment)
+			}
+		case OpLoopZ:
+			// Decrement CX register
+			s.registers[RegisterC] -= 1
+			if s.registers[RegisterC] != 0 && s.getFlagValue(FlagZF) == 1 {
 				s.memory.IncrementPosition(destinationOperand.Increment)
 			}
 		case OpLoop:
 			// Decremtn CX register
 			s.registers[RegisterC] -= 1
-
 			if s.registers[RegisterC] != 0 {
 				s.memory.IncrementPosition(destinationOperand.Increment)
 			}

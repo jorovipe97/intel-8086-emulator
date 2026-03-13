@@ -5,4 +5,5 @@ mov ax, 10
 
 my_loop:
 add ax, 10
-loop my_loop
+cmp cx, 4
+loopz my_loop

@@ -3,4 +3,5 @@ bits 16
 mov cx, 4
 mov ax, 10
 add ax, 10
-loop $+2+-5
+cmp cx, 4
+loopz $+2+-8
