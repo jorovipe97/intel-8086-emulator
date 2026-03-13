@@ -39,7 +39,7 @@ func main() {
 	asmPrinter := deco.NewAsmPrinter()
 	memory := deco.NewMemory(data)
 	decoder := deco.NewDecoder(memory)
-	simulator := deco.NewSimulator(memory, asmPrinter)
+	simulator := deco.NewSimulator(memory)
 
 	asmPrinter.AddComment(fileName)
 	asmPrinter.Bits16Header()
@@ -94,16 +94,21 @@ func main() {
 	// Reset memory position so we start executing instructions from the beginning
 	memory.ResetAbsolutePosition()
 	for {
+		if !memory.HasMoreInstructions() {
+			break
+		}
+
 		instr, err := decoder.NextInstruction()
 		if err != nil {
-			asmPrinter.AddComment(fmt.Sprintf("ERROR: %v", err))
-			break
+			fmt.Printf("error decoding instruction: %v", err)
+			return
 		}
 
 		if instr.Op != deco.OpNone {
 			err := simulator.ExecInstruction(instr)
 			if err != nil {
-				asmPrinter.AddComment("ERROR: Error simulating instruction.")
+				fmt.Printf("error executing instruction: %v", err)
+				return
 			}
 		} else {
 			break

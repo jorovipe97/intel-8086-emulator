@@ -20,11 +20,12 @@ type flagsExpectedValue struct {
 }
 
 type simulatorTestCase struct {
-	Name                          string
-	InputBinaryStream             []byte
-	RegistersExpectedValues       []registerExpectedValue
-	SegmentRegisterExpectedValues []segmentRegisterExpectedValue
-	FlagsExpectedValues           []flagsExpectedValue
+	Name                            string
+	InputBinaryStream               []byte
+	RegistersExpectedValues         []registerExpectedValue
+	SegmentRegisterExpectedValues   []segmentRegisterExpectedValue
+	InstructionPointerExpectedValue int
+	FlagsExpectedValues             []flagsExpectedValue
 }
 
 var simulatorCases = []simulatorTestCase{
@@ -39,6 +40,7 @@ var simulatorCases = []simulatorTestCase{
 			0b10001110, 0b11011011, 0b10001110, 0b11000001, 0b10001100, 0b11010100, 0b10001100, 0b11011101,
 			0b10001100, 0b11000110, 0b10001001, 0b11010111,
 		},
+		InstructionPointerExpectedValue: 44,
 		RegistersExpectedValues: []registerExpectedValue{
 			{Name: RegisterA, Value: 0x4411},
 			{Name: RegisterB, Value: 0x3344},
@@ -66,6 +68,7 @@ var simulatorCases = []simulatorTestCase{
 			0b10100110, 0b10111100, 0b01100011, 0b00000000, 0b10111101, 0b01100010, 0b00000000,
 			0b00111001, 0b11100101,
 		},
+		InstructionPointerExpectedValue: 44,
 		RegistersExpectedValues: []registerExpectedValue{
 			{Name: RegisterB, Value: 0x9ca5},
 			{Name: RegisterD, Value: 0x000a},
@@ -81,6 +84,28 @@ var simulatorCases = []simulatorTestCase{
 			{Flag: FlagPF, Value: 1},
 		},
 	},
+	{
+		// bits 16
+		// mov cx, 3
+		// mov bx, 1000
+		// loop_start:
+		// add bx, 10
+		// sub cx, 1
+		// jnz loop_start
+		Name: "loop using jnz",
+		InputBinaryStream: []byte{
+			0b10111001, 0b00000011, 0b00000000, 0b10111011, 0b11101000, 0b00000011, 0b10000011,
+			0b11000011, 0b00001010, 0b10000011, 0b11101001, 0b00000001, 0b01110101, 0b11111000,
+		},
+		RegistersExpectedValues: []registerExpectedValue{
+			{Name: RegisterB, Value: 0x0406},
+		},
+		InstructionPointerExpectedValue: 14,
+		FlagsExpectedValues: []flagsExpectedValue{
+			{Flag: FlagZF, Value: 1},
+			{Flag: FlagPF, Value: 1},
+		},
+	},
 }
 
 func TestSimulator(t *testing.T) {
@@ -89,7 +114,7 @@ func TestSimulator(t *testing.T) {
 		t.Run(testCase.Name, func(t *testing.T) {
 			_memory := NewMemory(testCase.InputBinaryStream)
 			_decoder := NewDecoder(_memory)
-			_simulator := NewSimulator(nil)
+			_simulator := NewSimulator(_memory)
 
 			for {
 				if !_memory.HasMoreInstructions() {
@@ -116,6 +141,11 @@ func TestSimulator(t *testing.T) {
 					t.Errorf("Register %v expected %04x, got %04x", expected.Name, expected.Value, _simulator.registers[expected.Name])
 					return
 				}
+			}
+
+			if _memory.AbsolutePosition != testCase.InstructionPointerExpectedValue {
+				t.Errorf("Expected instruction pointer (%v) do not match (%v)", testCase.InstructionPointerExpectedValue, _memory.AbsolutePosition)
+				return
 			}
 
 			// Checks segment registers have the expected value
@@ -196,7 +226,8 @@ var testCasesSimulatorFlags = []testCaseSimulatorFlags{
 
 func TestSimulatorFlags(t *testing.T) {
 	for _, testCase := range testCasesSimulatorFlags {
-		simulator := NewSimulator(nil)
+		memory := NewMemory([]byte{})
+		simulator := NewSimulator(memory)
 		simulator.registers[RegisterB] = testCase.destinationValue
 		simulator.registers[RegisterC] = testCase.sourceValue
 

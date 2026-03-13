@@ -11,13 +11,11 @@ type Simulator struct {
 	segmentRegisters [4]uint16
 	flags            int
 	memory           *Memory
-	asmPrinter       *AsmPrinter
 }
 
-func NewSimulator(memory *Memory, printer *AsmPrinter) *Simulator {
+func NewSimulator(memory *Memory) *Simulator {
 	return &Simulator{
-		memory:     memory,
-		asmPrinter: printer,
+		memory: memory,
 	}
 }
 
@@ -42,9 +40,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		zfValue := 0
 		if finalValue == 0 {
 			zfValue = 1
-			if s.asmPrinter != nil {
-				s.asmPrinter.AddComment("ZF set")
-			}
 		}
 
 		s.setFlagValue(FlagZF, zfValue)
@@ -56,9 +51,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		// TODO: Handle byte and word cases
 		if finalValue&(1<<15) != 0 {
 			sfValue = 1
-			if s.asmPrinter != nil {
-				s.asmPrinter.AddComment("SF set")
-			}
 		}
 		s.setFlagValue(FlagSF, sfValue)
 	}
@@ -70,9 +62,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		if bits.OnesCount8(uint8(finalValue))&1 == 0 {
 			// Is 1 when the count is even
 			pfValue = 1
-			if s.asmPrinter != nil {
-				s.asmPrinter.AddComment("PF set")
-			}
 		}
 
 		s.setFlagValue(FlagPF, pfValue)
@@ -85,9 +74,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 	// 	if bits.OnesCount8(uint8(finalValue))&1 == 0 {
 	// 		// Is 1 when the count is even
 	// 		afValue = 1
-	// 		if s.asmPrinter != nil {
-	// 			s.asmPrinter.AddComment("AF set")
-	// 		}
 	// 	}
 
 	// 	s.setFlagValue(FlagAF, afValue)
@@ -104,17 +90,11 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 			// then is because there happened an overflow.
 			if finalValue < destinationValue {
 				cfValue = 1
-				if s.asmPrinter != nil {
-					s.asmPrinter.AddComment("CF set")
-				}
 			}
 		case OpSub, OpCmp:
 			// Checks if value crossed below 0
 			if destinationValue < sourceValue {
 				cfValue = 1
-				if s.asmPrinter != nil {
-					s.asmPrinter.AddComment("CF set")
-				}
 			}
 		}
 
@@ -136,9 +116,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 
 				if positiveOverflow || negativeOverflow {
 					ofValue = 1
-					if s.asmPrinter != nil {
-						s.asmPrinter.AddComment("OF set")
-					}
 				}
 			} else {
 				// If operands are positive but result is negative, an overflow happened.
@@ -149,9 +126,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 
 				if positiveOverflow || negativeOverflow {
 					ofValue = 1
-					if s.asmPrinter != nil {
-						s.asmPrinter.AddComment("OF set")
-					}
 				}
 			}
 		case OpSub, OpCmp:
@@ -172,9 +146,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 
 				if areOperandsSignsDifferent && didResultChangedSign {
 					ofValue = 1
-					if s.asmPrinter != nil {
-						s.asmPrinter.AddComment("OF set")
-					}
 				}
 			} else {
 				areOperandsSignsDifferent := int8(destinationValue)^int8(sourceValue) < 0
@@ -183,9 +154,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 
 				if areOperandsSignsDifferent && didResultChangedSign {
 					ofValue = 1
-					if s.asmPrinter != nil {
-						s.asmPrinter.AddComment("OF set")
-					}
 				}
 			}
 		}
@@ -205,8 +173,6 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 	case RegisterOperand:
 		// Identify which part of memory should store result
 		register := destinationOperand.Register.RegisterName
-		// TODO: Maybe return a struct with info of registername, prevValue and new value.
-		prevValue := s.registers[register]
 
 		// If is a byte operand, eg: al, bl, cl, dl, ah, bh, ch, dh
 		// then we need to write the appropiate part of the register
@@ -225,18 +191,9 @@ func (s *Simulator) ExecInstruction(instruction Instruction) error {
 		} else {
 			s.registers[register] = finalValue
 		}
-
-		if s.asmPrinter != nil {
-			s.asmPrinter.AddComment(fmt.Sprintf("%v: %v -> %v", register.String(), prevValue, s.registers[register]))
-		}
 	case SegmentRegisterOperand:
 		registerName := destinationOperand.SegmentRegister
-		// TODO: Maybe return a struct with info of registername, prevValue and new value.
-		prevValue := s.segmentRegisters[registerName]
 		s.segmentRegisters[registerName] = finalValue
-		if s.asmPrinter != nil {
-			s.asmPrinter.AddComment(fmt.Sprintf("%v: %v -> %v", registerName.String(), prevValue, s.segmentRegisters[registerName]))
-		}
 	case InstructionPointerIncrementOperand:
 		switch instruction.Op {
 		case OpJNZ:
@@ -321,6 +278,26 @@ func (s *Simulator) String() string {
 	out += s.showSegmentRegisterValue(SegmentRegisterSS)
 	out += s.showSegmentRegisterValue(SegmentRegisterDS)
 	out += s.showIpRegister()
+
+	out += "\n\nFlags:"
+	if s.getFlagValue(FlagCF) == 1 {
+		out += "\t - CF\n"
+	}
+	if s.getFlagValue(FlagPF) == 1 {
+		out += "\t - PF\n"
+	}
+	if s.getFlagValue(FlagAF) == 1 {
+		out += "\t - AF\n"
+	}
+	if s.getFlagValue(FlagZF) == 1 {
+		out += "\t - ZF\n"
+	}
+	if s.getFlagValue(FlagSF) == 1 {
+		out += "\t - SF\n"
+	}
+	if s.getFlagValue(FlagOF) == 1 {
+		out += "\t - OF\n"
+	}
 
 	return out
 }
