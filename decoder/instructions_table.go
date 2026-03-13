@@ -351,6 +351,17 @@ var instructionsTable = [...]InstructionEncoding{
 			data,
 		},
 	},
+	{
+		op:       OpJB,
+		mnemonic: "jb",
+		bits: [16]InstructionBits{
+			{Usage: BitsLiteral, BitCount: 8, Value: 0b0111_0010},
+			ipInc,
+			// 8-bit IP increment.
+			impliedW(0),
+			data,
+		},
+	},
 }
 
 // NOTE(casey): This is the "Intel-specified" maximum length of an instruction, including prefixes\

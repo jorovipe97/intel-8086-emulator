@@ -14,6 +14,8 @@ const (
 	OpJZ
 	// Jump if Parity Even.
 	OpJP
+	// Jump if Carry (Below, Not Above Equal).
+	OpJB
 )
 
 type InstructionBitsUsage uint8
