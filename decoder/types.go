@@ -8,12 +8,12 @@ const (
 	OpAdd
 	OpSub
 	OpCmp
-
 	// Jump if Not Zero (Not Equal).
 	OpJNZ
-
 	// Jump if Zero (Equal).
 	OpJZ
+	// Jump if Parity Even.
+	OpJP
 )
 
 type InstructionBitsUsage uint8
